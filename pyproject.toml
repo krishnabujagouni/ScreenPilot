@@ -1,0 +1,15 @@
+[project]
+name = "y-control"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.134.0",
+    "langchain-core>=1.2.16",
+    "langchain-openai>=1.1.10",
+    "langgraph>=1.0.10",
+    "pyautogui>=0.9.54",
+    "python-dotenv>=1.2.1",
+    "uvicorn>=0.41.0",
+]
