@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ScreenPilot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #212121;
+    color: #ececec;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    width: 100%;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #2f2f2f;
+  }
+  header h1 { font-size: 16px; font-weight: 600; color: #fff; }
+  .badge {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    background: #2a2a2a;
+    color: #888;
+    border: 1px solid #333;
+  }
+  .badge.running { background: #1a3a1a; color: #4caf50; border-color: #2d5e2d; }
+
+  #chat {
+    flex: 1;
+    width: 100%;
+    max-width: 760px;
+    overflow-y: auto;
+    padding: 24px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  #chat::-webkit-scrollbar { width: 4px; }
+  #chat::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+  .msg {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+  .msg.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .msg.user .avatar { background: #1a4a8a; }
+  .msg.agent .avatar { background: #2a2a2a; border: 1px solid #3a3a3a; }
+
+  .bubble {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .msg.user .bubble { background: #2f6fd1; color: #fff; border-bottom-right-radius: 4px; }
+  .msg.agent .bubble { background: #2a2a2a; color: #ddd; border-bottom-left-radius: 4px; }
+
+  .steps { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+  .step {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #888;
+    padding: 3px 0 3px 8px;
+    border-left: 2px solid #3a3a3a;
+  }
+  .step.active { color: #4a90d9; border-left-color: #4a90d9; }
+  .step.done-step { color: #4caf50; border-left-color: #4caf50; }
+
+  .typing { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #555;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+
+  .input-bar { width: 100%; max-width: 760px; padding: 12px 16px 20px; }
+  .input-wrap {
+    display: flex;
+    align-items: center;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 14px;
+    padding: 4px 4px 4px 16px;
+    gap: 8px;
+    transition: border-color 0.2s;
+  }
+  .input-wrap:focus-within { border-color: #4a90d9; }
+  #cmd {
+    flex: 1; background: none; border: none; outline: none;
+    color: #ececec; font-size: 14px; padding: 8px 0;
+    resize: none; max-height: 120px; line-height: 1.5;
+  }
+  #cmd::placeholder { color: #555; }
+  #send-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: #2f6fd1; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.2s, opacity 0.2s;
+  }
+  #send-btn:hover:not(:disabled) { background: #3a7fe0; }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  #send-btn svg { fill: white; }
+  .hint { text-align: center; font-size: 11px; color: #444; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span>⚡</span>
+  <h1>ScreenPilot</h1>
+  <span class="badge" id="badge">Idle</span>
+</header>
+
+<div id="chat">
+  <div class="msg agent">
+    <div class="avatar">⚡</div>
+    <div class="bubble">
+      Hi! I'm ScreenPilot — I can automate your computer using natural language.<br><br>
+      Try: <em>"Open YouTube and play a video"</em> or <em>"Open Amazon and add something to cart"</em>
+    </div>
+  </div>
+</div>
+
+<div class="input-bar">
+  <div class="input-wrap">
+    <textarea id="cmd" rows="1" placeholder="Give me a task..."></textarea>
+    <button id="send-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+  <div class="hint">Press Enter to send · Shift+Enter for new line</div>
+</div>
+
+<script>
+  const chat    = document.getElementById('chat');
+  const cmd     = document.getElementById('cmd');
+  const sendBtn = document.getElementById('send-btn');
+  const badge   = document.getElementById('badge');
+
+  let running     = false;
+  let agentBubble = null;
+  let stepsEl     = null;
+  let eventSource = null;
+
+  cmd.addEventListener('input', () => {
+    cmd.style.height = 'auto';
+    cmd.style.height = Math.min(cmd.scrollHeight, 120) + 'px';
+  });
+  cmd.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  sendBtn.addEventListener('click', send);
+
+  function scrollBottom() { chat.scrollTop = chat.scrollHeight; }
+
+  function addMsg(role, html) {
+    const icon = role === 'user' ? '👤' : '⚡';
+    const div  = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.innerHTML = `<div class="avatar">${icon}</div><div class="bubble">${html}</div>`;
+    chat.appendChild(div);
+    scrollBottom();
+    return div.querySelector('.bubble');
+  }
+
+  function showTyping() {
+    agentBubble = addMsg('agent', '<div class="typing"><span></span><span></span><span></span></div>');
+    stepsEl = null;
+  }
+
+  function addStep(icon, text) {
+    if (!stepsEl) {
+      agentBubble.innerHTML = '<div class="steps"></div>';
+      stepsEl = agentBubble.querySelector('.steps');
+    }
+    const s = document.createElement('div');
+    s.className = 'step active';
+    s.innerHTML = `<span>${icon}</span><span>${text}</span>`;
+    stepsEl.appendChild(s);
+    // Mark previous step as done
+    const all = stepsEl.querySelectorAll('.step');
+    if (all.length > 1) all[all.length - 2].className = 'step done-step';
+    scrollBottom();
+  }
+
+  function finishAgent(text) {
+    if (!agentBubble) { addMsg('agent', text); return; }
+    // Mark last step done
+    if (stepsEl) {
+      stepsEl.querySelectorAll('.step').forEach(s => s.className = 'step done-step');
+      agentBubble.innerHTML += `<div style="margin-top:10px;color:#ddd">${text}</div>`;
+    } else {
+      agentBubble.innerHTML = text;
+    }
+    scrollBottom();
+  }
+
+  const TOOL_ICONS = {
+    click_at_position:'🖱️', double_click_at_position:'🖱️',
+    type_text:'⌨️', press_key:'⌨️', hotkey:'⌨️', select_all_and_type:'⌨️',
+    scroll_screen:'📜', scroll_at_position:'📜',
+    open_url:'🌐', search_google:'🔍', open_youtube:'▶️',
+    play_pause:'⏯️', volume_up:'🔊', volume_down:'🔉',
+    mute:'🔇', fullscreen:'⛶', skip_forward:'⏩', skip_backward:'⏪',
+    next_video:'⏭️', previous_video:'⏮️',
+    wait:'⏳', new_tab:'➕', go_back_browser:'◀️', refresh_page:'🔄',
+  };
+
+  function toolIcon(name) { return TOOL_ICONS[name] || '🔧'; }
+
+  function setRunning(val) {
+    running       = val;
+    sendBtn.disabled = val;
+    cmd.disabled  = val;
+    badge.textContent = val ? 'Running' : 'Idle';
+    badge.className   = 'badge' + (val ? ' running' : '');
+  }
+
+  function connectSSE() {
+    if (eventSource) { eventSource.close(); eventSource = null; }
+    const pass = encodeURIComponent(sessionStorage.getItem('dash_pass') || 'changeme');
+    eventSource = new EventSource('/stream?token=' + pass);
+
+    eventSource.addEventListener('log', e => {
+      const data = JSON.parse(e.data);
+      if (data.tool) addStep(toolIcon(data.tool), data.tool.replace(/_/g, ' '));
+    });
+
+    eventSource.addEventListener('done', e => {
+      const data = JSON.parse(e.data);
+      finishAgent(data.message || 'Done ✅');
+      setRunning(false);
+      cmd.focus();
+    });
+
+    eventSource.addEventListener('error', () => {
+      setTimeout(connectSSE, 2000);
+    });
+  }
+
+  async function send() {
+    const text = cmd.value.trim();
+    if (!text || running) return;
+
+    addMsg('user', text);
+    cmd.value = '';
+    cmd.style.height = 'auto';
+    setRunning(true);
+    showTyping();
+
+    try {
+      const pass = sessionStorage.getItem('dash_pass') || 'changeme';
+      const res  = await fetch('/control', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + btoa('admin:' + pass),
+        },
+        body: JSON.stringify({ text, use_vision: true }),
+      });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      // Result is already shown via SSE 'done' event.
+      // This just waits for the request to complete.
+    } catch (err) {
+      finishAgent('❌ ' + err.message);
+      setRunning(false);
+    }
+  }
+
+  if (!sessionStorage.getItem('dash_pass')) {
+    const p = prompt('Dashboard password:') || 'changeme';
+    sessionStorage.setItem('dash_pass', p);
+  }
+  connectSSE();
+</script>
+</body>
+</html>

@@ -1,207 +1,229 @@
-# 🎬 YouTube Laptop Agent
+# ⚡ ScreenPilot
 
-Control your laptop's YouTube and browser from your phone using **voice or text** — powered by LangGraph + GPT-4o.
+**Natural language UI automation agent powered by Gemini 2.5 Flash + Google ADK**
 
-```
-Phone (voice/text)
-      ↓
-FastAPI Server (laptop)
-      ↓
-LangGraph Agent (GPT-4o decides)
-      ↓
-Tools (pyautogui / webbrowser)
-      ↓
-YouTube / Chrome executes
-```
-
----
-
-## Features
-
-- 🎤 **Voice control** — speak commands from your phone browser
-- ⌨️ **Text control** — type anything natural
-- 🤖 **AI-powered** — GPT-4o understands variations like *"make it louder"*, *"go back a bit"*
-- 📱 **Phone UI** — open in any phone browser, no app install
-- 🔁 **Agent loop** — LangGraph ReAct loop with conditional routing
-- 🌐 **Browser control** — open URLs, search Google, manage tabs
-
----
-
-## Project Structure
+> Google Hackathon Project  
+> *Type a command. The agent sees your screen and acts.*
 
 ```
-laptop-agent/
-├── main.py          ← FastAPI server + request handling
-├── agent.py         ← LangGraph graph (nodes + edges)
-├── tools.py         ← pyautogui tool functions
-├── ui.html          ← Phone web UI (voice + buttons)
-├── .env             ← OpenAI API key (never commit this)
-└── requirements.txt ← Dependencies
+Browser Dashboard
+      ↓ HTTP POST
+FastAPI (local server)
+      ↓
+ADK Agent Loop
+      ↓
+Gemini 2.5 Flash via Vertex AI (sees screen + decides action)
+      ↓
+pyautogui (clicks, types, scrolls)
+      ↓
+Screen responds → screenshot → back to model
 ```
 
 ---
 
-## Setup
+## ✨ Features
 
-### 1. Clone the repo
+- 👁️ **Vision-based navigation** — Gemini sees your screen via screenshots after every action
+- 🎯 **Precise clicking** — agent finds elements and clicks at exact coordinates
+- ⌨️ **Natural language input** — type any plain English command
+- 📡 **Live step streaming** — every tool call streams to the dashboard in real time via SSE
+- 🔁 **Self-correction** — detects repeat loops and injects recovery hints automatically
+- 🧹 **Context management** — prunes old screenshots to prevent token overflow on long tasks
+- ⚡ **YouTube shortcuts** — media controls use keyboard shortcuts directly, no clicking
+- 🔐 **Authentication** — HTTP Basic Auth on dashboard + token-based SSE stream
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│            Browser Dashboard                     │
+│     (text input, live step stream via SSE)       │
+└─────────────────────┬───────────────────────────┘
+                      │ HTTP POST /control
+                      ▼
+┌─────────────────────────────────────────────────┐
+│              FastAPI (local)                     │
+│        /control  |  /stream (SSE)  |  /health   │
+└─────────────────────┬───────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────┐
+│           ADK Agent Loop                         │
+│  ┌──────────────────────────────────────────┐   │
+│  │  capture_screen → Gemini 2.5 Flash       │   │
+│  │  (Vertex AI)   → tool call → wait →      │   │
+│  │  capture_screen → verify → repeat        │   │
+│  └──────────────────────────────────────────┘   │
+└─────────────────────┬───────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────┐
+│                 pyautogui                        │
+│    click(x,y) | type() | press() | scroll()     │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 Project Structure
+
+```
+screenpilot/
+├── main.py           ← FastAPI server + SSE stream endpoint
+├── agent.py          ← ADK agent loop + Vertex AI setup + streaming
+├── tools.py          ← Screen capture + UI control tools
+├── dashboard.html    ← Browser dashboard with live step stream
+├── requirements.txt  ← Dependencies
+└── .env              ← API keys and config (don't commit)
+```
+
+---
+
+## 🚀 Quick Start
+
+### 1. Clone & Setup
 ```bash
-git clone https://github.com/your-username/laptop-agent.git
-cd laptop-agent
-```
-
-### 2. Create virtual environment
-```bash
+git clone https://github.com/your-username/screenpilot
+cd screenpilot
 python -m venv .venv
-.venv\Scripts\activate        # Windows
-source .venv/bin/activate     # Mac/Linux
-```
-
-### 3. Install dependencies
-```bash
+source .venv/bin/activate       # Mac/Linux
+.venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 ```
 
-### 4. Add your OpenAI API key
-Create a `.env` file:
-```
-OPENAI_API_KEY=sk-your-key-here
+### 2. Configure `.env`
+```env
+# Option A — Vertex AI (recommended)
+GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_GENAI_USE_VERTEXAI=True
+
+# Option B — Gemini API key (fallback)
+GOOGLE_API_KEY=your-gemini-api-key
+
+# Dashboard auth
+DASHBOARD_USER=admin
+DASHBOARD_PASS=changeme
 ```
 
-### 5. Run the server
+### 3. Authenticate with Google Cloud (if using Vertex AI)
+```bash
+gcloud auth application-default login
+```
+
+### 4. Find your IPv4 address
+```bash
+ipconfig        # Windows — look for IPv4 Address
+ifconfig        # Mac/Linux — look for inet under en0 or eth0
+```
+Example: `192.168.1.100`
+
+### 5. Run
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-### 6. Open on your phone
-Find your laptop IP:
-```bash
-ipconfig   # Windows — look for IPv4 under Wi-Fi
+### 6. Open dashboard
+On any device connected to the **same WiFi network**, open:
 ```
-Then open on your phone browser:
+http://<YOUR_IPv4>:8000
 ```
-http://<YOUR_LAPTOP_IP>:8000
-```
+Example: `http://192.168.1.100:8000`
 
-> ⚠️ Phone and laptop must be on the same WiFi network.
+> **Note:** Both machines must be on the same WiFi. `localhost` only works on the machine running the server.
 
 ---
 
-## Agent Architecture
+## 🎮 Usage
 
-```
-START
-  ↓
-[agent] ← GPT-4o reads command, decides tool
-  ↓
-should_continue()       ← single conditional edge
-  ├── tool_calls? → [tool_node] → [agent]   ← loop
-  └── no tool?   → END
-```
+Type any plain English command in the dashboard:
 
-The agent decides everything — no if/else string matching. GPT-4o either makes a tool call (routes to tools) or doesn't (routes to END).
+- `"Open YouTube and play a lofi video"`
+- `"Open Nike and add a shoe to cart"`
+- `"Search for Python tutorials on Google"`
+- `"Open Gmail and read the latest email"`
 
----
+Watch the steps stream live as the agent works through the task.
 
-## Supported Commands
-
-### YouTube
-| Say | Action |
-|-----|--------|
-| pause / hold on / stop | Pause video |
-| play / resume / unpause | Play video |
-| louder / volume up / turn it up | Increase volume |
-| quieter / volume down / lower | Decrease volume |
-| mute / silence | Toggle mute |
-| fullscreen / big screen | Toggle fullscreen |
-| skip / forward / +10 | Skip forward 10s |
-| back / rewind / -10 | Skip back 10s |
-| next video | Next in playlist |
-| previous video | Previous video |
-| open youtube | Open YouTube |
-
-### Browser
-| Say | Action |
-|-----|--------|
-| open chrome | Launch Chrome |
-| search [query] | Google search |
-| open [url] / go to [url] | Open any URL |
-| new tab | Open new tab |
-| close tab | Close current tab |
-| refresh / reload | Refresh page |
-| go back | Browser back |
-| go forward | Browser forward |
-
-### Session
-| Say | Action |
-|-----|--------|
-| bye / exit / quit / stop | End session |
+### YouTube shortcuts (instant, no vision needed)
+- `"pause"` → space key
+- `"volume up"` → arrow up
+- `"mute"` → M key
+- `"fullscreen"` → F key
+- `"skip forward"` → L key
 
 ---
 
-## API
+## 🛠️ Tools
 
-### POST `/control`
-Send a command to the agent.
-
-**Request:**
-```json
-{ "text": "pause the video" }
-```
-
-**Response:**
-```json
-{ "status": "ok", "command": "pause the video", "result": "Toggled play/pause" }
-```
-
-**Bye response:**
-```json
-{ "status": "bye", "command": "bye", "result": "👋 Goodbye! Send a command anytime to start again." }
-```
-
-### GET `/health`
-```json
-{ "status": "running", "agent": "LangGraph + GPT-4o" }
-```
+| Tool | Description |
+|------|-------------|
+| `capture_screen` | Triggers screenshot injection into model |
+| `click_at_position(x, y)` | Click at coordinates |
+| `double_click_at_position(x, y)` | Double-click |
+| `type_text(text)` | Type text at cursor |
+| `press_key(key)` | Press single key |
+| `hotkey(keys)` | Keyboard shortcut e.g. `ctrl+a` |
+| `select_all_and_type(x, y, text)` | Clear field and type |
+| `scroll_screen(direction, amount)` | Scroll up/down |
+| `scroll_at_position(x, y, direction)` | Scroll at specific position |
+| `open_url(url)` | Open any URL |
+| `search_google(query)` | Search Google |
+| `open_youtube()` | Open YouTube |
+| `new_tab()` | Open new browser tab |
+| `go_back_browser()` | Browser back |
+| `refresh_page()` | Refresh page |
+| `play_pause / mute / volume_up / volume_down` | YouTube shortcuts |
+| `skip_forward / skip_backward` | YouTube seek |
+| `next_video / previous_video / fullscreen` | YouTube navigation |
 
 ---
 
-## Requirements
+## 🔧 Tech Stack
 
-```
-fastapi
-uvicorn
-pyautogui
-langchain-openai
-langgraph
-langchain-core
-python-dotenv
-```
-
----
-
-## Troubleshooting
-
-**Phone can't reach server**
-- Make sure phone and laptop are on the same WiFi
-- Run as Administrator: `netsh advfirewall firewall add rule name="FastAPI 8000" dir=in action=allow protocol=TCP localport=8000`
-
-**Commands not working**
-- Make sure YouTube is open and focused in the browser before sending commands
-
-**Voice not working on phone**
-- Use Chrome browser on Android
-- Allow microphone permission when prompted
-
-**OpenAI errors**
-- Check your `.env` file has a valid `OPENAI_API_KEY`
-- Make sure there are no spaces or quotes around the key
+| Technology | Role |
+|---|---|
+| [Google ADK](https://google.github.io/adk-docs/) | Agent loop, tool registration, session management |
+| [Gemini 2.5 Flash](https://deepmind.google/gemini/) | Multimodal vision + reasoning |
+| [Google Cloud Vertex AI](https://cloud.google.com/vertex-ai) | Model inference API |
+| [FastAPI](https://fastapi.tiangolo.com) | Local REST API + SSE streaming |
+| [pyautogui](https://pyautogui.readthedocs.io) | Mouse, keyboard, screen capture |
+| [Pillow](https://pillow.readthedocs.io) | Screenshot resizing + JPEG compression |
 
 ---
 
-## Tech Stack
+## 🐛 Troubleshooting
 
-- **[LangGraph](https://github.com/langchain-ai/langgraph)** — agent graph framework
-- **[LangChain OpenAI](https://github.com/langchain-ai/langchain)** — GPT-4o integration
-- **[FastAPI](https://fastapi.tiangolo.com)** — API server
-- **[pyautogui](https://pyautogui.readthedocs.io)** — keyboard/mouse control
-- **Web Speech API** — voice input on phone
+**Can't reach dashboard from another device**
+- Make sure both devices are on the same WiFi network
+- Use your machine's IPv4 address, not `localhost`
+- Windows firewall — allow port 8000:
+  ```
+  netsh advfirewall firewall add rule name="ScreenPilot" dir=in action=allow protocol=TCP localport=8000
+  ```
+
+**Vertex AI not receiving requests**
+- Confirm `GOOGLE_GENAI_USE_VERTEXAI=True` is in `.env`
+- Run `gcloud auth application-default login`
+- Enable the API: `gcloud services enable aiplatform.googleapis.com`
+
+**Agent says DONE too early**
+- The model occasionally batches tool calls despite prompt instructions — retry the command
+
+**Screenshots not working**
+- Locally make sure the screen is not locked
+
+**Rate limit errors**
+- The agent retries automatically with exponential backoff up to 5 times
+- If persistent, wait 60 seconds and retry
+
+**Dashboard password prompt keeps appearing**
+- Enter the value set in `DASHBOARD_PASS` in your `.env` (default: `changeme`)
+
+---
+
+## 📄 License
+
+MIT

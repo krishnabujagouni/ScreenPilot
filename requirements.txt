@@ -1,7 +1,9 @@
 fastapi
-uvicorn
-pyautogui
-langchain-openai
-langgraph
-langchain-core
+uvicorn[standard]
 python-dotenv
+pillow
+pyautogui
+google-adk
+google-genai
+google-cloud-aiplatform
+vertexai
