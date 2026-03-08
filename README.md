@@ -85,8 +85,8 @@ screenpilot/
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/your-username/screenpilot
-cd screenpilot
+git clone https://github.com/krishnabujagouni/ScreenPilot
+cd ScreenPilot
 python -m venv .venv
 source .venv/bin/activate       # Mac/Linux
 .venv\Scripts\activate          # Windows
@@ -222,8 +222,61 @@ Watch the steps stream live as the agent works through the task.
 **Dashboard password prompt keeps appearing**
 - Enter the value set in `DASHBOARD_PASS` in your `.env` (default: `changeme`)
 
+
+## 🧪 Reproducible Testing
+
+### Prerequisites
+- Python 3.11+
+- A physical display (not headless) — pyautogui requires a screen
+- Google Cloud account with Vertex AI API enabled, OR a Gemini API key
+
+### Steps to reproduce
+
+1. **Clone the repo**
+```bash
+git clone https://github.com/krishnabujagouni/ScreenPilot
+cd ScreenPilot
+```
+
+2. **Install dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+3. **Configure environment**
+```bash
+cp .env.example .env
+# Edit .env and fill in your credentials
+```
+
+4. **Authenticate with Google Cloud**
+```bash
+gcloud auth application-default login
+```
+
+5. **Run the server**
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+6. **Open the dashboard**
+Find your IPv4 address:
+```bash
+ipconfig    # Windows
+ifconfig    # Mac/Linux
+```
+Open in browser: `http://<YOUR_IPv4>:8000`
+
+7. **Test a command**
+Type in the dashboard:
+```
+Open YouTube and play a lofi video
+```
+Expected: agent opens YouTube, finds a video, clicks it, confirms it's playing, returns DONE.
+
+### Verify Vertex AI is being used
+Check the terminal — you should see:
+```
+[agent] ☁️  Vertex AI — project=your-project, model=gemini-2.5-flash
+```
 ---
-
-## 📄 License
-
-MIT
